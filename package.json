@@ -1,0 +1,19 @@
+{
+  "name": "file-asshukukun",
+  "version": "1.0.0",
+  "private": true,
+  "description": "外部通信なし・HTML単体で使うファイル圧縮君",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "dependencies": {
+    "fflate": "0.8.2",
+    "fix-webm-duration": "1.0.6",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "5.6.205"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

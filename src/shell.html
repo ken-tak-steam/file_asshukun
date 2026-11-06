@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; style-src 'unsafe-inline'; img-src data: blob:; media-src blob:; font-src data: blob:; worker-src blob:; child-src blob:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="description" content="画像・PDF・動画・音声をブラウザ内で一括圧縮。HTML単体、外部通信なし。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231c7158'/%3E%3Cpath d='M22 14v14h-8l18 18 18-18h-8V14M16 53h32' fill='none' stroke='white' stroke-width='5' stroke-linejoin='round'/%3E%3C/svg%3E">
+<title>ファイル圧縮君</title>
+<style>/*__STYLE__*/</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand-icon" aria-hidden="true">↓</div>
+    <div><div class="eyebrow">ちょっと便利な、学校の道具。</div><h1>ファイル圧縮君<span class="version">v1.0</span></h1></div>
+    <span class="privacy">● 外部通信なし</span>
+  </header>
+  <main>
+    <div class="intro"><h2>ファイルを、ひとまわり軽く。</h2><p>画像も、PDFも、動画も、音声も。まとめて選んで、この端末の中で圧縮。</p></div>
+    <section class="card upload-card" aria-labelledby="add-title">
+      <div class="section-title"><span class="step">1</span><h3 id="add-title">ファイルを選ぶ</h3><span class="quiet">複数選択 OK</span></div>
+      <div id="dropzone" class="dropzone">
+        <div class="drop-icon" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3v17m-6-6 6 6 6-6M5 22v6h22v-6"/></svg></div>
+        <strong>ここにドラッグ＆ドロップ</strong>
+        <p>または、ボタンから選択・タッチで追加</p>
+        <button id="pick" class="primary" type="button">ファイルを選ぶ</button>
+        <input id="files" type="file" multiple hidden>
+        <div class="types">画像 <span>／</span> PDF <span>／</span> 動画 <span>／</span> 音声</div>
+      </div>
+      <p class="small hint">1ファイル300MB・合計600MB・100件まで。元ファイルは上書きしません。</p>
+      <div id="notice" class="notice" role="status" hidden></div>
+      <div class="queue-head" id="queue-head" hidden><span id="queue-summary"></span><button id="clear" class="text-button" type="button">すべて外す</button></div>
+      <ul id="queue" class="queue"></ul>
+    </section>
+
+    <section class="card" aria-labelledby="settings-title">
+      <div class="section-title"><span class="step">2</span><h3 id="settings-title">圧縮方法を決める</h3></div>
+      <fieldset id="settings">
+        <legend class="sr-only">圧縮設定</legend>
+        <div class="mode-options">
+          <label class="mode"><input type="radio" name="mode" value="shrink" checked><span><strong>ファイルを軽量化</strong><small>画質やサイズを調整して保存</small></span></label>
+          <label class="mode"><input type="radio" name="mode" value="zip"><span><strong>元ファイルをZIPに</strong><small>内容・画質を変えずにひとまとめ</small></span></label>
+        </div>
+        <div class="strength-title"><label for="strength">圧縮の強さ</label><output id="strength-value" for="strength">バランス · 55</output></div>
+        <input id="strength" type="range" min="10" max="90" step="1" value="55">
+        <div class="range-labels"><span>画質を優先</span><span>小ささを優先</span></div>
+        <div class="presets"><button type="button" data-strength="25">画質優先</button><button type="button" data-strength="55" class="active">バランス</button><button type="button" data-strength="85">小さく</button></div>
+        <p id="settings-summary" class="settings-summary"></p>
+        <div id="shrink-settings">
+          <div class="settings-grid">
+            <label>画像の保存形式<select id="image-format"><option value="image/jpeg">JPEG（透過部分は白色）</option><option value="image/webp">WebP（透過を保持）</option><option value="image/png">PNG（画質変更なし・縮小のみ）</option></select></label>
+            <label>画像の長辺の上限<select id="image-size"><option value="auto">圧縮の強さに合わせる</option><option value="0">元の大きさ</option><option value="3840">3,840 px</option><option value="2400">2,400 px</option><option value="1600">1,600 px</option><option value="1024">1,024 px</option></select></label>
+            <label>PDFの処理方法<select id="pdf-mode"><option value="keep">文字・リンクを保持（削減は控えめ）</option><option value="raster">ページを画像化（文字検索・リンクを失う）</option></select></label>
+            <label>動画の長辺の上限<select id="video-size"><option value="auto">圧縮の強さに合わせる</option><option value="1920">1,920 px</option><option value="1280">1,280 px</option><option value="854">854 px</option><option value="640">640 px</option></select></label>
+          </div>
+          <p id="pdf-warning" class="small warning" hidden>PDFを画像化します。文字選択・検索・リンク・フォーム・しおり・添付ファイルは引き継ぎません。必要な場合は「文字・リンクを保持」を選んでください。</p>
+          <label class="check"><input id="keep-smaller" type="checkbox" checked>圧縮後に大きくなった場合は、元ファイルを使う</label>
+        </div>
+        <label class="suffix-label">保存名に付ける文字<input id="suffix" type="text" value="_圧縮" maxlength="40" autocomplete="off"><small>例：写真_圧縮.jpg。処理後に1件ずつ別名へ変更できます。</small></label>
+      </fieldset>
+      <div class="important-note"><strong>対応範囲について</strong><p>圧縮率はファイルによって変わります。JPEG・MP4・MP3など、すでに圧縮されたファイルは小さくならないことがあります。</p><p>動画・音声は再生時間と同程度の処理時間が必要です。処理中はこの画面を開いたままにしてください。出力は対応ブラウザに応じてMP4／WebM、M4A／WebM音声になります。MP3形式での出力には対応していません。</p><p>画像のアニメーションは最初の1コマに変換します。動画の字幕・複数音声・HDRは保持しません。PDFの再保存では電子署名の有効性が失われます。保持が必要な場合は「元ファイルをZIPに」を選んでください。</p></div>
+      <div class="action-row"><button id="start" class="primary large" type="button" disabled>まとめて圧縮する</button><button id="cancel" class="secondary" type="button" hidden>中止する</button><span id="ready-text" class="small">ファイルを選ぶと始められます</span></div>
+      <div id="progress-area" hidden><div class="progress-heading"><span id="progress-text" role="status" aria-live="polite"></span><span id="progress-percent"></span></div><progress id="progress" value="0" max="100" aria-label="圧縮の進行状況"></progress><div id="media-stage" hidden><p class="small">変換中のプレビュー（音はスピーカーに出ません）</p><div id="media-host"></div><canvas id="video-canvas" aria-label="変換中の映像"></canvas></div></div>
+    </section>
+
+    <section id="results-area" class="card results-card" aria-labelledby="result-title" hidden>
+      <div class="section-title"><span class="step">3</span><h3 id="result-title">保存する</h3><span id="result-count" class="quiet"></span></div>
+      <div id="totals" class="totals"></div>
+      <p class="small">保存名を編集して、個別保存またはZIPで一括保存できます。</p>
+      <ul id="results" class="results"></ul>
+      <div class="zip-save"><label for="zip-name">ZIPの保存名</label><div><input id="zip-name" value="圧縮ファイル" maxlength="100" autocomplete="off" aria-label="ZIPの保存名"><span>.zip</span></div><button id="save-zip" class="primary" type="button" disabled>まとめてZIPを作成</button></div>
+      <p id="zip-status" class="small" role="status"></p>
+    </section>
+
+    <section class="help card">
+      <details><summary>使い方・対応ファイル</summary><div class="details-body"><ol><li>ファイルを選ぶ、またはドラッグ＆ドロップします。</li><li>圧縮方法と強さを選び「まとめて圧縮する」を押します。</li><li>容量を確認して名前を編集し、個別またはZIPで保存します。</li></ol><p>画像：JPEG・PNG・WebP・BMP・GIF・AVIFなど、ブラウザで読める形式。HEIC・TIFFなどは端末により読み込めません。</p><p>PDF：パスワード付き・暗号化PDFは対象外。画像化モードでは表示できない画像や特殊なPDFはエラーになることがあります。</p><p>動画：MP4・WebM・MOVなど、ブラウザが再生できる形式。音声：MP3・M4A・AAC・WAV・OGG・FLACなど、ブラウザが再生できる形式。変換の可否は端末とコーデックに依存します。</p><p id="media-support"></p><p>ZIPモードは形式を問わず保存できます。ZIPは暗号化されません。内容の閲覧を防ぐ機能はありません。</p><p>iPad・iPhoneではHTMLを「ファイル」アプリでプレビューするだけでは動作しない場合があります。Safariで公開ページを開くか、ローカルHTMLを実行できる環境を使ってください。Mac・Windowsではダウンロードしたindex.htmlをブラウザで開けます。</p><p>このHTMLには必要な処理ライブラリを同梱しています。CDN、解析、ログイン、広告、サーバーへのアップロードはありません。ファイル選択と保存先のクラウド同期など、OS・ブラウザ自身の機能による通信は別です。公開ページの最初の読み込みには通信が必要です。</p></div></details>
+      <details><summary>利用条件・ライセンス・免責事項</summary><div class="details-body"><pre>/*__LICENSE__*/</pre></div></details>
+      <details><summary>同梱ライブラリのライセンス</summary><div class="details-body"><pre>/*__NOTICES__*/</pre></div></details>
+    </section>
+  </main>
+  <footer><span>ファイル圧縮君</span><span>© 2026 タカクラケンタロウ</span><button type="button" id="download-app" class="text-button">このアプリのHTMLを保存</button></footer>
+</div>
+<noscript>このアプリを使うにはJavaScriptを有効にしてください。ファイルの送信は行いません。</noscript>
+<script>/*__LIBRARIES__*/</script>
+<script>/*__APP__*/</script>
+</body>
+</html>
